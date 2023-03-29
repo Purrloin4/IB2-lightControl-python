@@ -144,7 +144,7 @@ def check_microphone():
                         set_rgb_intensity(0)
                     else:
                         set_rgb_intensity(storedIntensity)
-                    requests.get("https://studev.groept.be/api/a22ib2b07/SaveSensorTime/Light")
+                    requests.get("https://studev.groept.be/api/a22ib2b07/SaveSensorTime/Microphone")
 
 
 def run_routine(start_time,stop_time, r, g, b, intensity, stop_event):
