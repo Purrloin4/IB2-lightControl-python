@@ -1,5 +1,5 @@
 import datetime
-
+import time
 import requests
 import RPi.GPIO as GPIO
 from time import sleep
@@ -125,16 +125,27 @@ def check_database():
                 active_routines.remove(active_routines[i])
                 routine_stop_events[name].set()
 
-        print(active_routines)
-        sleep(60)  # Wait 1 minute before checking again
+        # print(active_routines)
+        sleep(1)  # Wait 1 second before checking again
 
 
 
 def check_microphone():
     while True:
-        # print("Microphone value:", microphone.value)
-        if microphone.value > 0.5:
-            requests.get("https://studev.groept.be/api/a22ib2b07/SaveSensorTime/Sound")
+        # if microphone.value < 0.65 2 times in less than a second then toggle the light intensity
+
+        if microphone.value < 0.65:
+            # print("Microphone value:", microphone.value)
+            sleep(0.1)
+            start_time = time.time()
+            while time.time() - start_time < 1:
+                if microphone.value < 0.65:
+                    if GPIO.input(redPin) == 1 or GPIO.input(greenPin) == 1 or GPIO.input(bluePin) == 1:
+                        set_rgb_intensity(0)
+                    else:
+                        set_rgb_intensity(storedIntensity)
+                    requests.get("https://studev.groept.be/api/a22ib2b07/SaveSensorTime/Light")
+
 
 def run_routine(start_time,stop_time, r, g, b, intensity, stop_event):
 
@@ -151,7 +162,7 @@ def run_routine(start_time,stop_time, r, g, b, intensity, stop_event):
         last_run_stop = current_date - datetime.timedelta(days=1)
 
     while not stop_event.is_set():
-        print("Thread running" ,stop_event)
+        # print("Thread running" ,stop_event)
         now = datetime.datetime.now().time()
         current_date = datetime.date.today()
         if start_time <= now:
@@ -162,13 +173,13 @@ def run_routine(start_time,stop_time, r, g, b, intensity, stop_event):
             if current_date > last_run_stop:
                 update_colour([r, g, b], intensity)
                 last_run_start = current_date
-        sleep(60)  # Wait 1 minute before checking again
+        sleep(10)  # Wait 10 seconds before checking again
 
 
 sensor_thread = threading.Thread(target=check_ir_sensor)
 database_thread = threading.Thread(target=check_database)
-# microphone_thread = threading.Thread(target=check_microphone)
+microphone_thread = threading.Thread(target=check_microphone)
 
 sensor_thread.start()
 database_thread.start()
-# microphone_thread.start()
+microphone_thread.start()
