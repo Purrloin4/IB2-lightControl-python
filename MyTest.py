@@ -77,8 +77,13 @@ def check_ir_sensor():
                 else:
                     door_close = True
         if door_close == False and previous_door_close == True:
-            toggle_light()
-            requests.get("https://studev.groept.be/api/a22ib2b07/SaveSensorTime/Light")
+            if infrared.value < threshold_irSensor:
+                if GPIO.input(redPin) == 1 or GPIO.input(greenPin) == 1 or GPIO.input(bluePin) == 1:
+                    turn_pwm_off()
+                    requests.get("https://studev.groept.be/api/a22ib2b07/SaveSensorTime/Light")
+                else:
+                    update_colour(colour_values, storedIntensity)
+                    requests.get("https://studev.groept.be/api/a22ib2b07/SaveSensorTime/Light")
         previous_door_close = door_close
 
 
@@ -94,7 +99,7 @@ def check_database():
         intensity = response.json()[0]['intensity']
         if intensity != storedIntensity:
             storedIntensity = intensity
-            set_rgb_intensity(storedIntensity)
+            update_colour(colour_values, storedIntensity)
 
 
         response = requests.get('https://studev.groept.be/api/a22ib2b07/GetStoredRoutines')
@@ -128,20 +133,19 @@ def check_database():
 def check_microphone():
     while True:
         # if microphone.value < 0.65 2 times in less than a second then toggle the light intensity
+
         if microphone.value < 0.65:
+            # print("Microphone value:", microphone.value)
             sleep(0.1)
             start_time = time.time()
             while time.time() - start_time < 1:
                 if microphone.value < 0.65:
-                    toggle_light()
+                    if GPIO.input(redPin) == 1 or GPIO.input(greenPin) == 1 or GPIO.input(bluePin) == 1:
+                        set_rgb_intensity(0)
+                    else:
+                        set_rgb_intensity(storedIntensity)
                     requests.get("https://studev.groept.be/api/a22ib2b07/SaveSensorTime/Microphone")
 
-
-def toggle_light():
-    if GPIO.input(redPin) == 1 or GPIO.input(greenPin) == 1 or GPIO.input(bluePin) == 1:
-        turn_pwm_off()
-    else:
-        update_colour(colour_values, storedIntensity)
 
 def run_routine(start_time,stop_time, r, g, b, intensity, stop_event):
 
@@ -167,7 +171,7 @@ def run_routine(start_time,stop_time, r, g, b, intensity, stop_event):
                 last_run_start = current_date
         if stop_time <= now:
             if current_date > last_run_stop:
-                turn_pwm_off()
+                update_colour([r, g, b], intensity)
                 last_run_start = current_date
         sleep(10)  # Wait 10 seconds before checking again
 
