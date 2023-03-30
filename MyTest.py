@@ -12,7 +12,7 @@ current_pwm_value = 0
 colour_values = [255, 255, 255]
 storedIntensity = 100
 credentials = ('a22ib2b07', 'secret')
-threshold_irSensor = 0.95
+threshold_irSensor = 0.1
 redPin = 12
 greenPin = 19
 bluePin = 13
@@ -37,19 +37,12 @@ bluePin_pwm.start(0)
 
 
 def turn_pwm_off():
-    set_rgb_intensity(0)
+    redPin_pwm.ChangeDutyCycle(0)
+    greenPin_pwm.ChangeDutyCycle(0)
+    bluePin_pwm.ChangeDutyCycle(0)
 
 
-def set_rgb_intensity(percentage):
-    global current_pwm_value
-    if percentage < 0 or percentage > 100:
-        print("Invalid percentage value. Must be between 0 and 100.")
-        return
-    else:
-        current_pwm_value = percentage  # Update global variable
-        redPin_pwm.ChangeDutyCycle(percentage)
-        greenPin_pwm.ChangeDutyCycle(percentage)
-        bluePin_pwm.ChangeDutyCycle(percentage)
+
 
 
 def update_colour(colour_v, intensity):
@@ -94,7 +87,7 @@ def check_database():
         intensity = response.json()[0]['intensity']
         if intensity != storedIntensity:
             storedIntensity = intensity
-            set_rgb_intensity(storedIntensity)
+            update_colour(colour_values, storedIntensity)
 
 
         response = requests.get('https://studev.groept.be/api/a22ib2b07/GetStoredRoutines')
@@ -120,7 +113,7 @@ def check_database():
                 active_routines.remove(active_routines[i])
                 routine_stop_events[name].set()
 
-        # print(active_routines)
+        print(active_routines)
         sleep(1)  # Wait 1 second before checking again
 
 
@@ -135,6 +128,7 @@ def check_microphone():
                 if microphone.value < 0.65:
                     toggle_light()
                     requests.get("https://studev.groept.be/api/a22ib2b07/SaveSensorTime/Microphone")
+                    print ("Microphone toggled light")
 
 
 def toggle_light():
@@ -165,10 +159,12 @@ def run_routine(start_time,stop_time, r, g, b, intensity, stop_event):
             if current_date > last_run_start:
                 update_colour([r, g, b], intensity)
                 last_run_start = current_date
+                print("Routine started light")
         if stop_time <= now:
             if current_date > last_run_stop:
                 turn_pwm_off()
-                last_run_start = current_date
+                last_run_stop = current_date
+                print()
         sleep(10)  # Wait 10 seconds before checking again
 
 
